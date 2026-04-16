@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日めくりカレンダー</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; font-family: sans-serif; }
+  .wrapper { padding: 2rem 1rem 1rem; display: flex; flex-direction: column; align-items: center; }
+  .cal-wrap { display: flex; gap: 12px; justify-content: center; align-items: flex-start; }
+  .cal-panel { background: #111; border-radius: 8px; padding: 20px 28px; display: flex; flex-direction: column; align-items: center; min-width: 100px; }
+  .cal-number { font-family: 'Arial Black', 'Arial Bold', Impact, sans-serif; font-size: 90px; font-weight: 900; color: #fff; line-height: 1; letter-spacing: -2px; }
+  .cal-label { font-family: 'Arial Black', Impact, sans-serif; font-size: 12px; font-weight: 900; color: #aaa; letter-spacing: 3px; margin-top: 8px; text-transform: uppercase; }
+  .gear-btn { margin-top: 14px; width: 28px; height: 28px; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; background: none; border: none; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .gear-btn:hover { opacity: 1; }
+  .gear-btn svg { width: 18px; height: 18px; fill: #666; }
+  .palette-panel { display: none; margin-top: 12px; background: #fff; border: 0.5px solid #ddd; border-radius: 12px; padding: 14px 16px; width: 260px; }
+  .palette-panel.open { display: block; }
+  .pg-label { font-size: 11px; color: #999; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .pg-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .c-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; outline: 1px solid rgba(128,128,128,0.25); transition: transform 0.15s; }
+  .c-btn:hover { transform: scale(1.2); }
+  .c-btn.active { border-color: #333; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="cal-wrap">
+    <div class="cal-panel" id="monthPanel">
+      <div class="cal-number" id="monthNum"></div>
+      <div class="cal-label" id="monthLabel"></div>
+    </div>
+    <div class="cal-panel" id="dayPanel">
+      <div class="cal-number" id="dayNum"></div>
+      <div class="cal-label" id="dayLabel"></div>
+    </div>
+  </div>
+
+  <button class="gear-btn" id="gearBtn" title="色を変える">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.34.07-.68.07-1.08s-.03-.74-.07-1.08l2.32-1.82c.21-.16.27-.45.13-.69l-2.2-3.81c-.13-.24-.42-.32-.66-.24l-2.74 1.1c-.57-.44-1.18-.8-1.86-1.08l-.42-2.92A.54.54 0 0 0 13.5 3h-4.4c-.27 0-.49.19-.53.46l-.42 2.92c-.68.28-1.29.64-1.86 1.08l-2.74-1.1c-.25-.08-.53 0-.66.24l-2.2 3.81c-.14.24-.08.53.13.69l2.32 1.82c-.04.34-.07.69-.07 1.08s.03.74.07 1.08L.75 14.9c-.21.16-.27.45-.13.69l2.2 3.81c.13.24.42.32.66.24l2.74-1.1c.57.44 1.18.8 1.86 1.08l.42 2.92c.04.27.26.46.53.46h4.4c.27 0 .49-.19.53-.46l.42-2.92c.68-.28 1.29-.64 1.86-1.08l2.74 1.1c.25.08.53 0 .66-.24l2.2-3.81c.14-.24.08-.53-.13-.69l-2.32-1.82z"/>
+    </svg>
+  </button>
+
+  <div class="palette-panel" id="palettePanel">
+    <div class="pg-label">ライト系</div>
+    <div class="pg-row" id="rowLight"></div>
+    <div class="pg-label">カラー系</div>
+    <div class="pg-row" id="rowColor"></div>
+    <div class="pg-label">ビタミン系</div>
+    <div class="pg-row" id="rowVitamin"></div>
+    <div class="pg-label">モブ系</div>
+    <div class="pg-row" id="rowMob"></div>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const DAYS = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+
+const GROUPS = {
+  light: [
+    { bg:'#ffffff', text:'#222222', label:'#888888' },
+    { bg:'#f5f5f0', text:'#111111', label:'#666666' },
+    { bg:'#f0f0ff', text:'#222244', label:'#6666aa' },
+    { bg:'#f0fff4', text:'#1a3a1a', label:'#449966' },
+    { bg:'#fff8f0', text:'#3a1a00', label:'#996644' },
+    { bg:'#fff0f5', text:'#3a0020', label:'#996677' },
+    { bg:'#f0f8ff', text:'#001a3a', label:'#336699' },
+    { bg:'#fdfde8', text:'#333300', label:'#888844' },
+    { bg:'#f5e6ff', text:'#2a0044', label:'#8844aa' },
+  ],
+  color: [
+    { bg:'#1565c0', text:'#ffffff', label:'#90caf9' },
+    { bg:'#0277bd', text:'#ffffff', label:'#81d4fa' },
+    { bg:'#00838f', text:'#ffffff', label:'#80deea' },
+    { bg:'#2e7d32', text:'#ffffff', label:'#a5d6a7' },
+    { bg:'#558b2f', text:'#ffffff', label:'#dce775' },
+    { bg:'#ef6c00', text:'#ffffff', label:'#ffe0b2' },
+    { bg:'#c62828', text:'#ffffff', label:'#ffcdd2' },
+    { bg:'#ad1457', text:'#ffffff', label:'#f48fb1' },
+    { bg:'#6a1b9a', text:'#ffffff', label:'#ce93d8' },
+    { bg:'#37474f', text:'#ffffff', label:'#b0bec5' },
+    { bg:'#4e342e', text:'#ffffff', label:'#bcaaa4' },
+  ],
+  vitamin: [
+    { bg:'#ff1744', text:'#ffffff', label:'#ffcdd2' },
+    { bg:'#ff6d00', text:'#ffffff', label:'#ffe0b2' },
+    { bg:'#ffd600', text:'#222222', label:'#555500' },
+    { bg:'#00e676', text:'#003300', label:'#005500' },
+    { bg:'#00b0ff', text:'#ffffff', label:'#bbddff' },
+    { bg:'#d500f9', text:'#ffffff', label:'#f8bbff' },
+    { bg:'#ff4081', text:'#ffffff', label:'#ffd0e0' },
+    { bg:'#76ff03', text:'#1a3300', label:'#2a5500' },
+    { bg:'#18ffff', text:'#003333', label:'#005555' },
+    { bg:'#ff6e40', text:'#ffffff', label:'#ffd0c0' },
+    { bg:'#eeff41', text:'#333300', label:'#555500' },
+    { bg:'#ff80ab', text:'#440022', label:'#880044' },
+  ],
+  mob: [
+    { bg:'#b0a8c0', text:'#1a1226', label:'#4a3a6a' },
+    { bg:'#a8b8a8', text:'#1a2a1a', label:'#3a5a3a' },
+    { bg:'#c0b0a0', text:'#2a1a0a', label:'#5a3a1a' },
+    { bg:'#b8a8a8', text:'#2a1a1a', label:'#5a3333' },
+    { bg:'#a8b8c0', text:'#0a1a22', label:'#2a4a5a' },
+    { bg:'#c0b8a0', text:'#2a2000', label:'#5a4a00' },
+    { bg:'#b8b0c0', text:'#1a1226', label:'#443366' },
+    { bg:'#a0b0a8', text:'#0a1a16', label:'#2a4a3a' },
+    { bg:'#c8b0b0', text:'#2a1010', label:'#663333' },
+    { bg:'#b0b8c8', text:'#0a1222', label:'#334466' },
+    { bg:'#c0c0a8', text:'#202010', label:'#505030' },
+    { bg:'#b8a8b8', text:'#220a22', label:'#553355' },
+  ]
+};
+
+let activeBtn = null;
+
+function update() {
+  const now = new Date();
+  document.getElementById('monthNum').textContent = String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('monthLabel').textContent = MONTHS[now.getMonth()];
+  document.getElementById('dayNum').textContent = String(now.getDate()).padStart(2,'0');
+  document.getElementById('dayLabel').textContent = DAYS[now.getDay()];
+}
+
+function applyColor(c, btn) {
+  document.querySelectorAll('.cal-panel').forEach(p => p.style.background = c.bg);
+  document.querySelectorAll('.cal-number').forEach(n => n.style.color = c.text);
+  document.querySelectorAll('.cal-label').forEach(l => l.style.color = c.label);
+  if (activeBtn) activeBtn.classList.remove('active');
+  btn.classList.add('active');
+  activeBtn = btn;
+}
+
+function buildRow(id, colors, isFirst) {
+  const row = document.getElementById(id);
+  colors.forEach((c, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'c-btn';
+    btn.style.background = c.bg;
+    btn.onclick = () => applyColor(c, btn);
+    if (isFirst && i === 0) {
+      btn.classList.add('active');
+      activeBtn = btn;
+    }
+    row.appendChild(btn);
+  });
+}
+
+buildRow('rowLight', GROUPS.light, true);
+buildRow('rowColor', GROUPS.color, false);
+buildRow('rowVitamin', GROUPS.vitamin, false);
+buildRow('rowMob', GROUPS.mob, false);
+
+document.getElementById('gearBtn').onclick = () => {
+  document.getElementById('palettePanel').classList.toggle('open');
+};
+
+update();
+setInterval(update, 60000);
+</script>
+</body>
+</html>
